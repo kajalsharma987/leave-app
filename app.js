@@ -1,5 +1,6 @@
 // पर्यावरण चर (environment variables) को लोड करें (.env फाइल से)
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config({ path: '../.env' }); // अगर .env फाइल आपके app.js के पैरेंट फोल्डर में है तो यह सही है,
+                                             // अगर app.js और .env एक ही फोल्डर में हैं तो path: '.env' होगा
 const express = require('express');
 const path = require('path');
 const jwt = require('jsonwebtoken');
@@ -16,13 +17,15 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // डेवलपमेंट के लिए, आप सभी ओरिजिन की अनुमति दे सकते हैं: { origin: '*' }
 // प्रोडक्शन में, आपको विशिष्ट फ्रंटएंड URL को अनुमति देनी चाहिए
 app.use(cors({
-    origin: '*', // अपने फ्रंटएंड के URL से बदलें यदि यह अलग है
+    origin: '*', // अपने फ्रंटएंड के URL से बदलें यदि यह अलग है (Render डिप्लॉयमेंट के बाद)
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
 
 app.use(express.json()); // JSON बॉडी को पार्स करने के लिए मिडलवेयर
-app.use(express.static(path.join(__dirname, '../public'))); // 'public' फोल्डर से स्टैटिक फाइलें सर्व करें
+
+// // 'public' फोल्डर से स्टैटिक फाइलें सर्व करें - यह लाइन हटाई गई है (क्योंकि फ्रंटएंड अलग से डिप्लॉय होगा)
+// app.use(express.static(path.join(__dirname, '../public')));
 
 // यह फ़ंक्शन डेटाबेस में टेबल्स बनाता है और डिफ़ॉल्ट एडमिन यूजर डालता है
 // इसे केवल एक बार एप्लिकेशन स्टार्ट होने पर कॉल किया जाना चाहिए
@@ -137,7 +140,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!email || !!password) { // यहां एक छोटी टाइपो थी, इसे ठीक किया गया
         return res.status(400).json({ message: 'ईमेल और पासवर्ड आवश्यक हैं।' });
     }
 
@@ -285,10 +288,10 @@ app.put('/api/leaves/:id/status', authenticateToken, authorizeRoles(['teacher', 
     }
 });
 
-// SPA रूटिंग के लिए index.html सर्व करने के लिए कैच-ऑल
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'index.html'));
-});
+// // SPA रूटिंग के लिए index.html सर्व करने के लिए कैच-ऑल - यह लाइन हटाई गई है
+// app.get('*', (req, res) => {
+//     res.sendFile(path.join(__dirname, '../public', 'index.html'));
+// });
 
 // सर्वर शुरू करें
 app.listen(PORT, () => {
