@@ -140,7 +140,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !!password) { // यहां एक छोटी टाइपो थी, इसे ठीक किया गया
+    if (!email || !password) { // <-- Change '!!password' to '!password' here
         return res.status(400).json({ message: 'ईमेल और पासवर्ड आवश्यक हैं।' });
     }
 
