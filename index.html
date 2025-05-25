@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Approval System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+    <script src="script.js" defer></script>
+
+    <div id="loading-spinner" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-white"></div>
+    </div>
+
+    <div id="auth-section" class="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-600">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 id="auth-title" class="text-3xl font-bold text-center text-gray-800 mb-6">Login</h2>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="login-email" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="login-password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="login-password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Login</button>
+            </form>
+
+            <form id="register-form" class="space-y-4 hidden">
+                <div>
+                    <label for="register-name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="register-name" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="register-email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="register-email" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="register-password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="register-password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="register-role" class="block text-sm font-medium text-gray-700">Role</label>
+                    <select id="register-role" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">Select Role</option>
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Register</button>
+            </form>
+
+            <p class="mt-6 text-center text-sm text-gray-600">
+                <span id="toggle-auth-text">Don't have an account?</span>
+                <button id="toggle-auth-mode" class="font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none">Register</button>
+            </p>
+            <p id="auth-message" class="text-center text-red-500 text-sm mt-4"></p>
+        </div>
+    </div>
+
+    <div id="dashboard-section" class="hidden min-h-screen bg-gray-100">
+        <header class="bg-white shadow-md p-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-800">Leave Approval System</h1>
+            <nav class="flex items-center space-x-4">
+                <span id="user-info" class="text-gray-700 font-medium"></span>
+                <button id="logout-btn" class="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600">Logout</button>
+            </nav>
+        </header>
+
+        <main class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <div class="bg-white rounded-lg shadow-lg p-6 md:col-span-1">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Apply for Leave</h2>
+                <form id="apply-leave-form" class="space-y-4">
+                    <div>
+                        <label for="leave-type" class="block text-sm font-medium text-gray-700">Leave Type</label>
+                        <select id="leave-type" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md">
+                            <option value="">Select Type</option>
+                            <option value="sick">Sick Leave</option>
+                            <option value="casual">Casual Leave</option>
+                            <option value="earned">Earned Leave</option>
+                            <option value="maternity/paternity">Maternity/Paternity Leave</option>
+                            <option value="bereavement">Bereavement Leave</option>
+                            <option value="unpaid">Unpaid Leave</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="start-date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                        <input type="date" id="start-date" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label for="end-date" class="block text-sm font-medium text-gray-700">End Date</label>
+                        <input type="date" id="end-date" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md">
+                    </div>
+
+                    <div id="days-of-leave-display" class="mt-2 text-sm font-medium text-gray-700 hidden">
+                        Days of Leave: <span id="calculated-days" class="font-bold text-indigo-600">0</span>
+                    </div>
+
+                    <div>
+                        <label for="reason-select" class="block text-sm font-medium text-gray-700">Reason Category</label>
+                        <select id="reason-select" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md">
+                            <option value="">Select Reason Category</option>
+                            <option value="medical_appointment">Medical Appointment</option>
+                            <option value="family_event">Family Event</option>
+                            <option value="personal_errand">Personal Errand</option>
+                            <option value="travel">Travel</option>
+                            <option value="other">Other (Please specify)</option>
+                        </select>
+                    </div>
+
+                    <div id="reason-group" class="hidden">
+                        <label for="reason" class="block text-sm font-medium text-gray-700">Specific Reason</label>
+                        <textarea id="reason" rows="3" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md" placeholder="Please specify your reason here..."></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Submit Leave</button>
+                    <p id="apply-leave-message" class="text-center text-sm mt-2"></p>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6 md:col-span-2">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">My Leave Applications</h2>
+                <div id="my-leaves-list" class="space-y-4">
+                    <p class="text-gray-600">No leave applications found.</p>
+                </div>
+            </div>
+
+            <div id="pending-approvals-card" class="bg-white rounded-lg shadow-lg p-6 md:col-span-3 hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Pending Approvals</h2>
+                <div id="pending-approvals-list" class="space-y-4">
+                    <p class="text-gray-600">No pending leave applications for approval.</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</body>
+</html>

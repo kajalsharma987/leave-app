@@ -1,0 +1,7 @@
+/* No custom styles needed if using Tailwind classes exclusively for layout and appearance.
+   You can add your own custom styles here if needed.
+*/
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
