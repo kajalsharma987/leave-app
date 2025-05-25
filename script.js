@@ -1,5 +1,6 @@
 // --- API Base URL ---
-const API_BASE_URL = 'http://localhost:3000/api'; // Ensure this matches your backend port
+// अपनी मौजूदा लाइन को इससे बदलें:
+const API_BASE_URL = 'https://leave-app-2.onrender.com/api'; // Ensure this matches your backend port
 
 // --- DOM Elements ---
 const authSection = document.getElementById('auth-section');
