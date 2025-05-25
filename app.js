@@ -17,10 +17,11 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // डेवलपमेंट के लिए, आप सभी ओरिजिन की अनुमति दे सकते हैं: { origin: '*' }
 // प्रोडक्शन में, आपको विशिष्ट फ्रंटएंड URL को अनुमति देनी चाहिए
 app.use(cors({
-    origin: "*"// <-- यह सबसे महत्वपूर्ण लाइन है!
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // <-- इसे ऐसे ही रखें!
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
+
 
 app.use(express.json()); // JSON बॉडी को पार्स करने के लिए मिडलवेयर
 
