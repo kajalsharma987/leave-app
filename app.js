@@ -1,5 +1,5 @@
 // पर्यावरण चर (environment variables) को लोड करें (.env फाइल से)
-require('dotenv').config({ path: '../.env' }); // अगर .env फाइल आपके app.js के पैरेंट फोल्डर में है तो यह सही है,
+require('dotenv').config(); // <-- यह बदलाव करें // अगर .env फाइल आपके app.js के पैरेंट फोल्डर में है तो यह सही है,
                                              // अगर app.js और .env एक ही फोल्डर में हैं तो path: '.env' होगा
 const express = require('express');
 const path = require('path');
