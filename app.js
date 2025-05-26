@@ -1,38 +1,38 @@
-// पर्यावरण चर (environment variables) को लोड करें (.env फाइल से)
-require('dotenv').config(); // <-- यह बदलाव करें // अगर .env फाइल आपके app.js के पैरेंट फोल्डर में है तो यह सही है,
-                                             // अगर app.js और .env एक ही फोल्डर में हैं तो path: '.env' होगा
+// Load environment variables from .env file
+require('dotenv').config(); // <-- This modification (if .env is in parent folder of app.js, this is correct;
+                             // if app.js and .env are in the same folder, it would be path: '.env')
+
 const express = require('express');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const pool = require('./db'); // आपका PostgreSQL डेटाबेस कनेक्शन पूल
-const cors = require('cors'); // CORS (Cross-Origin Resource Sharing) के लिए
+const pool = require('./db'); // Your PostgreSQL database connection pool
+const cors = require('cors'); // For CORS (Cross-Origin Resource Sharing)
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// CORS को कॉन्फ़िगर करें
-// यदि आपका फ्रंटएंड और बैकएंड अलग-अलग डोमेन या पोर्ट पर हैं तो यह आवश्यक है
-// डेवलपमेंट के लिए, आप सभी ओरिजिन की अनुमति दे सकते हैं: { origin: '*' }
-// प्रोडक्शन में, आपको विशिष्ट फ्रंटएंड URL को अनुमति देनी चाहिए
+// Configure CORS
+// This is necessary if your frontend and backend are on different domains or ports
+// For development, you can allow all origins: { origin: '*' }
+// In production, you should allow specific frontend URLs
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // <-- इसे ऐसे ही रखें!
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // <-- Keep this as is!
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
 
+app.use(express.json()); // Middleware to parse JSON bodies
 
-app.use(express.json()); // JSON बॉडी को पार्स करने के लिए मिडलवेयर
-
-// // 'public' फोल्डर से स्टैटिक फाइलें सर्व करें - यह लाइन हटाई गई है (क्योंकि फ्रंटएंड अलग से डिप्लॉय होगा)
+// // Serve static files from the 'public' folder - This line was removed (as frontend will be deployed separately)
 // app.use(express.static(path.join(__dirname, '../public')));
 
-// यह फ़ंक्शन डेटाबेस में टेबल्स बनाता है और डिफ़ॉल्ट एडमिन यूजर डालता है
-// इसे केवल एक बार एप्लिकेशन स्टार्ट होने पर कॉल किया जाना चाहिए
+// This function creates tables in the database and inserts a default admin user
+// It should be called only once when the application starts
 async function createTablesAndAdmin() {
     try {
-        // Users टेबल बनाएं
+        // Create Users table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -44,7 +44,7 @@ async function createTablesAndAdmin() {
             );
         `);
 
-        // Leave Applications टेबल बनाएं
+        // Create Leave Applications table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS leave_applications (
                 id SERIAL PRIMARY KEY,
@@ -66,10 +66,10 @@ async function createTablesAndAdmin() {
         `);
         console.log('Tables created successfully or already exist.');
 
-        // डिफ़ॉल्ट एडमिन यूजर बनाएं यदि मौजूद न हो
+        // Create default admin user if not exists
         const adminExists = await pool.query("SELECT * FROM users WHERE email = 'admin@example.com'");
         if (adminExists.rows.length === 0) {
-            const hashedPassword = await bcrypt.hash('admin123', 10); // 'admin123' को एक मजबूत पासवर्ड से बदलें
+            const hashedPassword = await bcrypt.hash('admin123', 10); // Replace 'admin123' with a stronger password
             await pool.query(
                 `INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4)`,
                 ['Admin User', 'admin@example.com', hashedPassword, 'admin']
@@ -81,10 +81,10 @@ async function createTablesAndAdmin() {
     }
 }
 
-// एप्लिकेशन स्टार्ट होने पर टेबल्स बनाने और एडमिन यूजर डालने के लिए इस फ़ंक्शन को कॉल करें
+// Call this function to create tables and insert admin user when application starts
 createTablesAndAdmin();
 
-// --- मिडलवेयर (Middleware) प्रमाणीकरण और प्राधिकरण के लिए ---
+// --- Middleware for Authentication and Authorization ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -93,7 +93,7 @@ const authenticateToken = (req, res, next) => {
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) return res.status(403).json({ message: 'Invalid or expired token' });
-        req.user = user; // user पेलोड में { id, name, email, role } शामिल है
+        req.user = user; // user payload includes { id, name, email, role }
         next();
     });
 };
@@ -107,18 +107,18 @@ const authorizeRoles = (roles) => {
     };
 };
 
-// --- API एंडपॉइंट्स (Endpoints) ---
+// --- API Endpoints ---
 
-// यूजर रजिस्ट्रेशन
+// User Registration
 app.post('/api/register', async (req, res) => {
     const { name, email, password, role } = req.body;
 
     if (!name || !email || !password || !role) {
-        return res.status(400).json({ message: 'सभी फ़ील्ड आवश्यक हैं।' });
+        return res.status(400).json({ message: 'All fields are required.' });
     }
 
     if (!['student', 'teacher', 'admin'].includes(role)) {
-        return res.status(400).json({ message: 'अमान्य भूमिका निर्दिष्ट की गई है।' });
+        return res.status(400).json({ message: 'Invalid role specified.' });
     }
 
     try {
@@ -127,22 +127,22 @@ app.post('/api/register', async (req, res) => {
             'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
             [name, email, hashedPassword, role]
         );
-        res.status(201).json({ message: 'उपयोगकर्ता सफलतापूर्वक पंजीकृत हुआ!', userId: result.rows[0].id });
+        res.status(201).json({ message: 'User registered successfully!', userId: result.rows[0].id });
     } catch (error) {
-        console.error("पंजीकरण के दौरान डेटाबेस त्रुटि:", error.message);
+        console.error("Database error during registration:", error.message);
         if (error.code === '23505') { // PostgreSQL unique_violation error code
-            return res.status(409).json({ message: 'यह ईमेल पहले से पंजीकृत है।' });
+            return res.status(409).json({ message: 'This email is already registered.' });
         }
-        res.status(500).json({ message: 'पंजीकरण के दौरान सर्वर त्रुटि।' });
+        res.status(500).json({ message: 'Server error during registration.' });
     }
 });
 
-// यूजर लॉगिन
+// User Login
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) { // <-- Change '!!password' to '!password' here
-        return res.status(400).json({ message: 'ईमेल और पासवर्ड आवश्यक हैं।' });
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required.' });
     }
 
     try {
@@ -150,23 +150,23 @@ app.post('/api/login', async (req, res) => {
         const user = result.rows[0];
 
         if (!user) {
-            return res.status(401).json({ message: 'अमान्य क्रेडेंशियल।' });
+            return res.status(401).json({ message: 'Invalid email or password.' }); // Changed from Hindi
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: 'अमान्य क्रेडेंशियल।' });
+            return res.status(401).json({ message: 'Invalid email or password.' }); // Changed from Hindi
         }
 
-        // JWT टोकन जेनरेट करें
+        // Generate JWT token
         const token = jwt.sign(
             { id: user.id, name: user.name, email: user.email, role: user.role },
             JWT_SECRET,
-            { expiresIn: '1h' } // टोकन 1 घंटे में समाप्त हो जाता है
+            { expiresIn: '1h' } // Token expires in 1 hour
         );
 
         res.status(200).json({
-            message: 'लॉगिन सफल रहा',
+            message: 'Login successful',
             token: token,
             user: {
                 id: user.id,
@@ -176,37 +176,37 @@ app.post('/api/login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("लॉगिन के दौरान डेटाबेस त्रुटि:", error.message);
-        res.status(500).json({ message: 'आंतरिक सर्वर त्रुटि।' });
+        console.error("Database error during login:", error.message);
+        res.status(500).json({ message: 'Internal server error.' }); // Changed from Hindi
     }
 });
 
-// लीव के लिए आवेदन करें
+// Apply for Leave
 app.post('/api/leaves', authenticateToken, async (req, res) => {
     const { leaveType, startDate, endDate, reason } = req.body;
     const { id: applicantId, name: applicantName, role: applicantRole } = req.user;
 
     if (!leaveType || !startDate || !endDate || !reason) {
-        return res.status(400).json({ message: 'सभी लीव फ़ील्ड आवश्यक हैं।' });
+        return res.status(400).json({ message: 'All leave fields are required.' });
     }
     if (new Date(startDate) > new Date(endDate)) {
-        return res.status(400).json({ message: 'शुरू होने की तारीख समाप्त होने की तारीख के बाद नहीं हो सकती।' });
+        return res.status(400).json({ message: 'Start date cannot be after end date.' });
     }
 
     try {
         const result = await pool.query(
             `INSERT INTO leave_applications (applicant_id, applicant_name, applicant_role, leave_type, start_date, end_date, reason, status, submitted_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id`, // NOW() PostgreSQL में वर्तमान टाइमस्टैम्प के लिए
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id`, // NOW() for current timestamp in PostgreSQL
             [applicantId, applicantName, applicantRole, leaveType, startDate, endDate, reason, 'Pending']
         );
-        res.status(201).json({ message: 'लीव आवेदन सफलतापूर्वक सबमिट हुआ!', leaveId: result.rows[0].id });
+        res.status(201).json({ message: 'Leave application submitted successfully!', leaveId: result.rows[0].id });
     } catch (error) {
-        console.error("लीव सबमिट करने में डेटाबेस त्रुटि:", error.message);
-        res.status(500).json({ message: 'लीव आवेदन सबमिट करने में विफल रहा।' });
+        console.error("Database error submitting leave:", error.message);
+        res.status(500).json({ message: 'Failed to submit leave application.' });
     }
 });
 
-// उपयोगकर्ता की अपनी लीव देखें
+// View user's own leaves
 app.get('/api/leaves/my', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     try {
@@ -216,12 +216,12 @@ app.get('/api/leaves/my', authenticateToken, async (req, res) => {
         );
         res.status(200).json(result.rows);
     } catch (error) {
-        console.error("मेरी लीव लाने में डेटाबेस त्रुटि:", error.message);
-        res.status(500).json({ message: 'आपके लीव आवेदन लाने में विफल रहा।' });
+        console.error("Database error fetching my leaves:", error.message);
+        res.status(500).json({ message: 'Failed to fetch your leave applications.' });
     }
 });
 
-// लंबित अनुमोदन प्राप्त करें (शिक्षकों और प्रशासकों के लिए)
+// Get pending approvals (for teachers and admins)
 app.get('/api/leaves/pending', authenticateToken, authorizeRoles(['teacher', 'admin']), async (req, res) => {
     const userRole = req.user.role;
     let queryText = 'SELECT * FROM leave_applications WHERE status = $1';
@@ -237,19 +237,19 @@ app.get('/api/leaves/pending', authenticateToken, authorizeRoles(['teacher', 'ad
         const result = await pool.query(queryText, params);
         res.status(200).json(result.rows);
     } catch (error) {
-        console.error("लंबित लीव लाने में डेटाबेस त्रुटि:", error.message);
-        res.status(500).json({ message: 'लंबित लीव आवेदन लाने में विफल रहा।' });
+        console.error("Database error fetching pending leaves:", error.message);
+        res.status(500).json({ message: 'Failed to fetch pending leave applications.' });
     }
 });
 
-// लीव को स्वीकृत/अस्वीकृत करें (शिक्षकों और प्रशासकों के लिए)
+// Approve/Reject Leave (for teachers and admins)
 app.put('/api/leaves/:id/status', authenticateToken, authorizeRoles(['teacher', 'admin']), async (req, res) => {
     const leaveId = req.params.id;
     const { status, approverRemarks } = req.body;
     const { id: approverId, name: approverName, role: approverRole } = req.user;
 
     if (!['Approved', 'Rejected'].includes(status)) {
-        return res.status(400).json({ message: 'अमान्य स्थिति प्रदान की गई है।' });
+        return res.status(400).json({ message: 'Invalid status provided.' });
     }
 
     try {
@@ -257,15 +257,15 @@ app.put('/api/leaves/:id/status', authenticateToken, authorizeRoles(['teacher', 
         const leave = leaveResult.rows[0];
 
         if (!leave) {
-            return res.status(404).json({ message: 'लीव आवेदन नहीं मिला।' });
+            return res.status(404).json({ message: 'Leave application not found.' });
         }
         if (leave.status !== 'Pending') {
-            return res.status(400).json({ message: 'लीव लंबित स्थिति में नहीं है।' });
+            return res.status(400).json({ message: 'Leave is not in Pending status.' });
         }
 
-        // शिक्षक भूमिका के लिए प्राधिकरण जांच
+        // Authorization check for teacher role
         if (approverRole === 'teacher' && leave.applicant_role !== 'student') {
-            return res.status(403).json({ message: 'शिक्षक केवल छात्र लीव को स्वीकृत/अस्वीकृत कर सकते हैं।' });
+            return res.status(403).json({ message: 'Teachers can only approve/reject student leaves.' });
         }
 
         const updateResult = await pool.query(
@@ -280,21 +280,21 @@ app.put('/api/leaves/:id/status', authenticateToken, authorizeRoles(['teacher', 
         );
 
         if (updateResult.rowCount === 0) {
-            return res.status(404).json({ message: 'लीव आवेदन नहीं मिला या कोई बदलाव नहीं किया गया।' });
+            return res.status(404).json({ message: 'Leave application not found or no changes made.' });
         }
-        res.status(200).json({ message: `लीव सफलतापूर्वक ${status} हुई!` });
+        res.status(200).json({ message: `Leave successfully ${status.toLowerCase()}!` });
     } catch (error) {
-        console.error(`लीव की स्थिति ${status} करने में डेटाबेस त्रुटि:`, error.message);
-        res.status(500).json({ message: `लीव की स्थिति ${status} करने में विफल रहा: ${error.message}` });
+        console.error(`Database error while setting leave status to ${status}:`, error.message);
+        res.status(500).json({ message: `Failed to set leave status to ${status}: ${error.message}` });
     }
 });
 
-// // SPA रूटिंग के लिए index.html सर्व करने के लिए कैच-ऑल - यह लाइन हटाई गई है
+// // Catch-all to serve index.html for SPA routing - This line was removed
 // app.get('*', (req, res) => {
 //     res.sendFile(path.join(__dirname, '../public', 'index.html'));
 // });
 
-// सर्वर शुरू करें
+// Start the server
 app.listen(PORT, () => {
-    console.log(`सर्वर http://localhost:${PORT} पर चल रहा है`);
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
