@@ -1,4 +1,4 @@
-// --- API Base URL ---
+// --- API Base URL r---
 // अपनी मौजूदा लाइन को इससे बदलें:
 const API_BASE_URL = 'https://leave-app-3.onrender.com/api'; // Ensure this matches your backend port
 
@@ -26,8 +26,8 @@ const applyLeaveMessage = document.getElementById('apply-leave-message');
 const daysOfLeaveDisplay = document.getElementById('days-of-leave-display');
 const calculatedDaysSpan = document.getElementById('calculated-days');
 const reasonSelect = document.getElementById('reason-select'); // The new select dropdown
-const reasonGroup = document.getElementById('reason-group');   // The div containing the textarea
-const reasonInput = document.getElementById('reason');         // The specific reason textarea
+const reasonGroup = document.getElementById('reason-group');    // The div containing the textarea
+const reasonInput = document.getElementById('reason');          // The specific reason textarea
 
 const myLeavesList = document.getElementById('my-leaves-list');
 const pendingApprovalsCard = document.getElementById('pending-approvals-card');
@@ -371,6 +371,53 @@ async function loadMyLeaves() {
     }
 }
 
+// --- NEW: handleLeaveAction function definition ---
+async function handleLeaveAction(event) {
+    const button = event.target;
+    const leaveId = button.dataset.id;
+    const status = button.dataset.status; // 'Approved' or 'Rejected'
+    
+    // Get remarks from the input field associated with this leave item
+    const remarksInput = document.getElementById(`remarks-${leaveId}`);
+    const approverRemarks = remarksInput ? remarksInput.value : '';
+
+    if (!currentUser || (currentUser.role !== 'teacher' && currentUser.role !== 'admin')) {
+        alert("You are not authorized to perform this action.");
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to ${status.toLowerCase()} this leave application?`)) {
+        return;
+    }
+
+    showLoading();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/leaves/${leaveId}/status`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ status, approverRemarks })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`Leave application ${status.toLowerCase()} successfully!`);
+            loadPendingApprovals(); // Reload the list after action
+            loadMyLeaves(); // Update the applicant's view as well if they are logged in
+        } else if (response.status === 401 || response.status === 403) {
+            alert(data.message || "Authorization failed. Please log in again.");
+            logoutUser();
+        } else {
+            alert(`Error ${status.toLowerCase()} leave: ${data.message || 'Server error'}`);
+        }
+    } catch (error) {
+        console.error(`Error ${status.toLowerCase()} leave:`, error);
+        alert("Network error or server unavailable.");
+    } finally {
+        hideLoading();
+    }
+}
+
 
 // --- Display Pending Approvals (Teacher/Admin) ---
 
@@ -384,11 +431,11 @@ function renderPendingApprovals(leaves) {
         const leaveItem = document.createElement('div');
         leaveItem.className = 'bg-gray-50 p-4 rounded-md shadow-sm border border-gray-200';
         leaveItem.innerHTML = `
-            <p class="font-semibold">Applicant: ${leave.applicantName} (${leave.applicantRole})</p>
-            <p>Type: <span class="text-indigo-700">${leave.leaveType}</span></p>
-            <p>Dates: ${leave.startDate} to ${leave.endDate}</p>
+            <p class="font-semibold">Applicant: ${leave.applicant_name} (${leave.applicant_role})</p>
+            <p>Type: <span class="text-indigo-700">${leave.leave_type}</span></p>
+            <p>Dates: ${new Date(leave.start_date).toLocaleDateString()} to ${new Date(leave.end_date).toLocaleDateString()}</p>
             <p>Reason: ${leave.reason}</p>
-            <p class="text-sm text-gray-500">Submitted on: ${new Date(leave.submittedAt).toLocaleDateString()}</p>
+            <p class="text-sm text-gray-500">Submitted on: ${new Date(leave.submitted_at).toLocaleDateString()}</p>
             <div class="mt-4 flex space-x-2">
                 <input type="text" id="remarks-${leave.id}" placeholder="Remarks (Optional)" class="flex-grow px-3 py-1 border border-gray-300 rounded-md text-sm">
                 <button data-id="${leave.id}" data-status="Approved" class="approve-btn bg-green-500 text-white py-1 px-3 rounded-md hover:bg-green-600 text-sm">Approve</button>
@@ -399,6 +446,7 @@ function renderPendingApprovals(leaves) {
     });
 
     // Add event listeners for approve/reject buttons
+    // handleLeaveAction अब यहां परिभाषित है
     pendingApprovalsList.querySelectorAll('.approve-btn, .reject-btn').forEach(button => {
         button.addEventListener('click', handleLeaveAction);
     });
